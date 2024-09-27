@@ -7,29 +7,30 @@ import matplotlib.colors as mcolors
 # Konfiguration af siden
 st.set_page_config(page_title="Comparison Report", page_icon="📊")
 
-# Funktion til at oprette forbindelse til SQL Server og hente data
-def get_data():
-    conn_str = (
-        r'DRIVER={ODBC Driver 17 for SQL Server};'
-        r'SERVER=52.166.191.42,4022;'
-        r'DATABASE=DSA;'
-        r'UID=sje;'
-        r'PWD=Haderslev2024;'
-    )
-    conn = pyodbc.connect(conn_str)
-    
-    # Hent de fire datasæt
-    df_player_stats_total = pd.read_sql('SELECT * FROM [DSA].[WyScout].[PlayerAdvanceStats_Total] WHERE SeasonId = 189918', conn)
-    df_player_stats_avg = pd.read_sql('SELECT * FROM [DSA].[WyScout].[PlayerAdvanceStats_Average] WHERE SeasonId = 189918', conn)
-    df_player_stats_percent = pd.read_sql('SELECT * FROM [DSA].[WyScout].[PlayerAdvanceStats_Percent] WHERE SeasonId = 189918', conn)
-    df_players = pd.read_sql('SELECT * FROM [DSA].[WyScout].[Players] WHERE SeasonId = \'189918\'', conn)
-    df_teams = pd.read_sql('SELECT * FROM [DSA].[WyScout].[Teams]', conn)
-    
-    conn.close()
-    return df_player_stats_total, df_player_stats_avg, df_player_stats_percent, df_players, df_teams
+# Define connection parameters
+server = '52.166.191.42,4022'
+database = 'DSA'
+username = 'sje'
+password = 'Haderslev2024'
+driver = '{ODBC Driver 17 for SQL Server}'
 
-# Hent data
-df_player_stats_total, df_player_stats_avg, df_player_stats_percent, df_players, df_teams = get_data()
+# Establish the connection
+conn = pyodbc.connect(f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}')
+
+# Function to execute queries and return a DataFrame
+@st.cache_data
+def ejecutar_consulta(query):
+    return pd.read_sql(query, conn)
+
+# Hent de fire datasæt ved at udføre separate SQL-forespørgsler
+df_player_stats_total = ejecutar_consulta("SELECT * FROM [DSA].[WyScout].[PlayerAdvanceStats_Total] WHERE SeasonId = 189918")
+df_player_stats_avg = ejecutar_consulta("SELECT * FROM [DSA].[WyScout].[PlayerAdvanceStats_Average] WHERE SeasonId = 189918")
+df_player_stats_percent = ejecutar_consulta("SELECT * FROM [DSA].[WyScout].[PlayerAdvanceStats_Percent] WHERE SeasonId = 189918")
+df_players = ejecutar_consulta("SELECT * FROM [DSA].[WyScout].[Players] WHERE SeasonId = '189918'")
+df_teams = ejecutar_consulta("SELECT * FROM [DSA].[WyScout].[Teams]")
+
+# Displaying a sample of the data
+st.write(df_player_stats_total.head())
 
 # Filtrer hold til kun at inkludere dem med SeasonId = 189918
 df_teams_filtered = df_teams[df_teams['TeamId'].isin(df_players['CurrentTeamId'].unique())]
